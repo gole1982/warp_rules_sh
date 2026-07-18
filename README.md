@@ -1,6 +1,6 @@
 # Cloudflare WARP 分流规则（域名回退 + 隧道分割）
 
-适用于 **Cloudflare WARP 消费版（Windows）** 的分流规则文档。
+适用于 **Cloudflare WARP 消费版（Windows / Linux / macOS）** 的分流规则。
 
 核心理念：**国内网站直连（绕过 WARP），国外 LLM / 搜索引擎 / 被墙站点走 WARP 隧道。**
 由于消费版 WARP 仅支持 Exclude（排除）模式，实现方式是把国内域名从隧道中**排除**并加入 **DNS 回退**，其余流量默认走隧道。
@@ -16,50 +16,49 @@
 
 ### 验证证据
 
-1. **DNS 回退后缀匹配**：配置裸 `qq.com` 后，解析 `www.qq.com` → 日志显示 `via default`（本地解析器），证明子域命中。
-2. **隧道排除不覆盖子域**：仅配置裸 `qq.com` 时，`tracert www.qq.com` 首跳为 `104.28.0.0`（Cloudflare 边缘）→ 流量**进了隧道**；
-   而同时配置 `tieba.baidu.com` 时，`tracert tieba.baidu.com` 首跳为 `192.168.50.1`（本地路由器）→ **直连**。
-3. **国家后缀 `cn` 一条全覆盖**：配置裸 `cn` 后，`cloudflare.cn`、`baidu.com.cn`、`people.com.cn` 均 `via default` 且 tracert 直连，证明 `.cn` 任意层级被单条 `cn` 覆盖。
+1. **DNS 回退后缀匹配**：配置裸 `qq.com` 后，解析 `mail.qq.com` → 日志显示 `via default`（本地解析器），证明子域命中。
+2. **隧道排除不覆盖子域**：仅配置裸 `qq.com` 时，`tracert mail.qq.com` 首跳为 `104.28.0.0`（Cloudflare 边缘）→ 流量**进了隧道**；
+   而同时配置 `*.qq.com` 时，`mail.qq.com` 首跳为本地路由器 → **直连**。
+3. **国家后缀 `cn` 一条全覆盖**：配置裸 `cn` 后，`cloudflare.cn`、`baidu.com.cn`、`people.com.cn` 均 `via default` 且 tracert 直连。
 
 ---
 
-## 二、域名分类简化规则
+## 二、域名添加方法论（本规则集采用）
 
-| 类型 | 示例 | DNS 回退简化 | 隧道排除简化 |
-|------|------|--------------|--------------|
-| 不同后缀 | `abc.com` / `abc.net` | 各一条，不可合并 | 各一条，不可合并 |
-| 子串相似但无关 | `abcdef.com` / `bcd.com` | 各一条（子串 ≠ 域名关系） | 各一条 |
-| 同域 + 子域 | `abc.com` / `1.abc.com` / `2.abc.com` | **一条 `abc.com`** 即覆盖全部子域 | **两条**：`abc.com` + `*.abc.com` |
-| 国家后缀 | 所有 `.cn` 站点 | **一条 `cn`** | **一条 `cn`** |
+对每个**国内常用服务**，只添加其**主页主域**与通配子域两条：
 
-### 简化操作清单
+```
+主页          (如 qq.com)
+*.主页        (如 *.qq.com，覆盖 mail.qq.com / v.qq.com / 所有未来子域)
+```
 
-- **DNS 回退列表**：凡是「已存在裸主域」的子域条目（如 `tieba.baidu.com`、`mail.qq.com`）全部删除，裸主域已后缀覆盖。
-- **隧道排除列表**：子域条目**必须保留**（裸主域不匹配子域流量）。如需覆盖某主域全部子域，添加 `*.主域`。
-- **`.cn` 体系**：仅需一条 `cn`（回退 + 隧道各一条），无需逐条列举中文站点 `.cn` 域名。
-- **中间含 `cn` 的国内 `.com` 站**（如 `oss-cn-hangzhou.aliyuncs.com`、`ark.cn-beijing.volces.com`）不被 `cn` 覆盖，需按真实后缀（`.com`）逐条或加 `*.aliyuncs.com` 等。
+- **不做**逐条枚举子域（mail./v./qzone. 等）——用 `*.主页` 一次性覆盖。
+- **国家后缀** `cn` 单条覆盖全部 `.cn` 层级。
+- **国外服务一律不加**直连列表，即使它有国内入口（如 `cn.bing.com`、`bing.com` 整体算国外服务 → 走隧道）。
+- 中间含 `cn` 的国内 `.com` 站，按"主页"逻辑处理（如 `oss-cn-hangzhou.aliyuncs.com` → 用 `aliyuncs.com` + `*.aliyuncs.com`）。
+
+### 分类简化对照
+
+| 类型 | 示例 | 简化写法 |
+|------|------|----------|
+| 国内服务 | `qq.com` | `qq.com` + `*.qq.com` |
+| 国家后缀 | 所有 `.cn` | `cn` |
+| 国外服务（不加） | `bing.com` / `google.com` / `openai.com` | 不出现在列表，默认走隧道 |
 
 ---
 
 ## 三、当前生效规则集
 
-> 以下为推送时从本机 WARP 导出的实际配置快照。
+> 从本机 WARP 导出的实际配置快照：DNS 回退与隧道排除各 **175** 条。
 
-### DNS 回退列表（`warp-cli dns fallback list`）
-共 **109** 条。结构：
-- 裸后缀：`cn`（覆盖全部 `.cn`）
-- 国内主域：`baidu.com`、`qq.com`、`taobao.com`、`jd.com`、`weibo.com`、`zhihu.com`、`bilibili.com`、`aliyun.com`、`tencentcloud.com`、`huaweicloud.com` 等（裸主域已后缀覆盖其子域）
-
-### 隧道排除列表（`warp-cli tunnel host list`）
-共 **122** 条。结构：
-- 裸后缀：`cn`
-- 国内主域：`baidu.com`、`qq.com` 等
-- 必要子域：`tieba.baidu.com`、`map.baidu.com`、`mail.qq.com`、`v.qq.com`、`qzone.qq.com`、`lbs.amap.com`、`jr.jd.com`、`oss-cn-hangzhou.aliyuncs.com` 等（隧道排除需显式覆盖子域）
+结构：
+- 国家后缀：`cn`（覆盖全部 `.cn`）
+- 国内服务主页 + `*.主页`，覆盖：百度、QQ、淘宝/天猫、京东、拼多多、微博、知乎、B站、抖音、快手、小红书、爱奇艺、优酷、芒果、携程、美团、阿里/腾讯/华为云、163、搜狐、新浪、360、搜狗、飞书、钉钉、WPS、CSDN、滴滴、高德、新华/央视/人民网、gov.cn、edu.cn、国内大模型（DeepSeek/智谱/月之暗面/通义/阶跃/零一万物等）等。
 
 ### 默认走 WARP 隧道的流量（未排除即走隧道）
 - LLM API：`openai.com`、`api.anthropic.com`、`api.x.ai`(grok)、`generativelanguage.googleapis.com`(gemini)
 - 安全平台：`hackthebox.com`、`tryhackme.com`
-- 搜索引擎：`google.com`、`duckduckgo.com`
+- 搜索引擎：`google.com`、`duckduckgo.com`、`bing.com`（国外服务，含 cn.bing.com 入口也走隧道）
 - 被墙站点：`youtube.com`、`facebook.com`、`x.com`、`huggingface.co`、`github.com` 等
 
 ---
@@ -87,24 +86,23 @@ chmod +x apply_warp_rules.sh
 ### 注意事项
 1. 脚本依赖 `warp-cli` 已安装并注册（`warp-cli registration show` 可见状态）。
 2. 消费版 WARP 仅支持 Exclude 模式，脚本通过 `tunnel host add` / `dns fallback add` 实现分流。
-3. 隧道排除中子域必须逐条或用 `*.` 通配；DNS 回退中裸主域即覆盖子域。
-4. 修改后建议重启 WARP 服务使规则全量生效：`warp-cli disconnect` 后 `warp-cli connect`。
+3. 每个国内服务以 `主页` + `*.主页` 两条形式添加；`cn` 单条覆盖国家后缀。
+4. 修改后建议重启 WARP 使规则全量生效：`warp-cli disconnect` 后 `warp-cli connect`。
 
 ---
 
 ## 五、快速验证命令
 
 ```powershell
-# 1. 确认 .cn 走本地解析 (应显示 via default)
-#    查看日志: C:\ProgramData\Cloudflare\cfwarp_daemon_dns.txt
+# 1. 确认 .cn / 国内子域走本地解析 (应 via default)
 warp-cli dns log enable
-Resolve-DnsName cloudflare.cn
-# 日志中对应行应含 "via default"
+Resolve-DnsName mail.qq.com
+# 日志 (C:\ProgramData\Cloudflare\cfwarp_daemon_dns.txt) 对应行应含 "via default"
 
-# 2. 确认外国域名走 WARP 隧道 (应显示 via primary)
+# 2. 确认外国域名走 WARP 隧道 (应 via primary)
 Resolve-DnsName github.com
-# 日志中对应行应含 "via primary"
+# 对应行应含 "via primary"
 
-# 3. 确认 .cn 流量直连 (首跳应为本地路由器, 非 Cloudflare 边缘)
-tracert -h 3 <某.cn域名解析出的IP>
+# 3. 确认国内子域流量直连 (首跳为本地路由器, 非 Cloudflare 边缘)
+tracert -h 3 <某国内子域解析出的IP>
 ```
