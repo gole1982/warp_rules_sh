@@ -2,121 +2,35 @@
 # Purpose: Apply domain-fallback + split-tunnel exclusion rules so that
 #          domestic (.cn / major Chinese sites) bypass WARP, while foreign
 #          LLM / search / blocked sites go through the WARP tunnel by default.
-# Method:  each domestic service = "homepage" + "*.homepage"; "cn" covers all .cn.
+#
+# Matching semantics (verified):
+#   - DNS fallback  = SUFFIX match  -> bare "abc.com" already covers all subdomains.
+#                     Therefore the fallback list contains ONLY bare homepages + "cn".
+#   - Tunnel exclude = DOMAIN match -> bare "abc.com" does NOT cover subdomains;
+#                     subdomains need "*.abc.com". So exclude list = homepage + *.homepage.
 
 $ErrorActionPreference = 'SilentlyContinue'
 
 function Test-Warp {
     $reg = warp-cli registration show 2>&1
     if ($LASTEXITCODE -ne 0 -or ($reg -match 'not registered' -or $reg -match 'error')) {
-        Write-Warning "warp-cli 未就绪或未注册，请先完成 WARP 注册 (warp-cli registration new)。"
+        Write-Warning "warp-cli not ready / not registered. Run: warp-cli registration new"
         exit 1
     }
 }
-
 function Add-Fallback { param([string[]]$list)
-    $n = 0
-    foreach ($d in $list) { if ((warp-cli dns fallback add $d 2>&1) -match 'Success') { $n++ } }
-    Write-Host "DNS 回退: 已添加 $n / $($list.Count)"
+    $n=0; foreach ($d in $list){ if((warp-cli dns fallback add $d 2>&1) -match 'Success'){ $n++ } }
+    Write-Host "DNS fallback: added $n / $($list.Count)"
 }
-
 function Add-Exclude { param([string[]]$list)
-    $n = 0
-    foreach ($d in $list) { if ((warp-cli tunnel host add $d 2>&1) -match 'Success') { $n++ } }
-    Write-Host "隧道排除: 已添加 $n / $($list.Count)"
+    $n=0; foreach ($d in $list){ if((warp-cli tunnel host add $d 2>&1) -match 'Success'){ $n++ } }
+    Write-Host "Tunnel exclude: added $n / $($list.Count)"
 }
 
 Test-Warp
 
-# ===== DNS 回退列表 (后缀匹配: 裸主页已覆盖子域, *.主页 冗余但无害) =====
+# DNS fallback: bare homepages only (suffix match covers subdomains) + "cn"
 $fallback = @(
-    '*.12306.cn',
-    '*.126.com',
-    '*.163.com',
-    '*.360.cn',
-    '*.abchina.com',
-    '*.alipay.com',
-    '*.aliyun.com',
-    '*.aliyuncs.com',
-    '*.amap.com',
-    '*.baichuan-ai.com',
-    '*.baidu.com',
-    '*.bankcomm.com',
-    '*.bankofchina.com',
-    '*.bilibili.com',
-    '*.bytedance.com',
-    '*.ccb.com',
-    '*.cctv.com',
-    '*.china.com.cn',
-    '*.chinaz.com',
-    '*.cmbchina.com',
-    '*.cnblogs.com',
-    '*.csdn.net',
-    '*.ctrip.com',
-    '*.deepseek.ai',
-    '*.deepseek.com',
-    '*.dianping.com',
-    '*.didiglobal.com',
-    '*.dingtalk.com',
-    '*.docer.com',
-    '*.douban.com',
-    '*.douyin.com',
-    '*.douyu.com',
-    '*.edu.cn',
-    '*.feishu.cn',
-    '*.fliggy.com',
-    '*.foxmail.com',
-    '*.gov.cn',
-    '*.haier.com',
-    '*.huawei.com.cn',
-    '*.huaweicloud.com',
-    '*.huya.com',
-    '*.icbc.com',
-    '*.iqiyi.com',
-    '*.jd.com',
-    '*.jianshu.com',
-    '*.jingdong.com',
-    '*.kuaishou.com',
-    '*.kugou.com',
-    '*.lenovo.com.cn',
-    '*.lingyiwanwu.com',
-    '*.meituan.com',
-    '*.mgtv.com',
-    '*.mi.com',
-    '*.minimax.io',
-    '*.moonshot.cn',
-    '*.myqcloud.com',
-    '*.netease.com',
-    '*.oschina.net',
-    '*.people.com.cn',
-    '*.pinduoduo.com',
-    '*.qq.com',
-    '*.qunar.com',
-    '*.qwen.ai',
-    '*.sina.com.cn',
-    '*.sogou.com',
-    '*.sohu.com',
-    '*.stepfun.com',
-    '*.suning.com',
-    '*.taobao.com',
-    '*.tcl.com',
-    '*.tencentcloud.com',
-    '*.tmall.com',
-    '*.toutiao.com',
-    '*.trip.com',
-    '*.vip.com',
-    '*.volcengine.com',
-    '*.weibo.com',
-    '*.weixin.qq.com',
-    '*.wps.com',
-    '*.xianyu.com',
-    '*.xiaohongshu.com',
-    '*.xinhuanet.com',
-    '*.yi.com',
-    '*.yinyuetai.com',
-    '*.youku.com',
-    '*.zhihu.com',
-    '*.zhipuai.cn',
     '12306.cn',
     '126.com',
     '163.com',
@@ -207,7 +121,7 @@ $fallback = @(
     'zhipuai.cn'
 )
 
-# ===== 隧道排除列表 (域名匹配: 子域需 *. 通配) =====
+# Tunnel exclude: homepage + *.homepage (domain match needs wildcard for subdomains) + "cn"
 $exclude  = @(
     '*.12306.cn',
     '*.126.com',
@@ -389,5 +303,4 @@ $exclude  = @(
 Add-Fallback $fallback
 Add-Exclude  $exclude
 
-Write-Host "=== 完成。建议重启 WARP 使规则全量生效 ==="
-Write-Host "warp-cli disconnect ; warp-cli connect"
+Write-Host "=== Done. Restart WARP to apply fully: warp-cli disconnect ; warp-cli connect ==="

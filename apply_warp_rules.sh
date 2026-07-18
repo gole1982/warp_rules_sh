@@ -2,105 +2,18 @@
 # Apply Cloudflare WARP domain-fallback + split-tunnel exclusion rules.
 # Domestic (.cn / major Chinese) sites bypass WARP; foreign LLM/search/blocked
 # sites go through the WARP tunnel by default.
-# Each domestic service = "homepage" + "*.homepage"; "cn" covers all .cn.
+#   DNS fallback  = SUFFIX match  -> bare "abc.com" covers subdomains (no wildcard needed)
+#   Tunnel exclude = DOMAIN match -> subdomains need "*.abc.com"
 # Requires: warp-cli installed, WARP registered, run as root.
 
 set -euo pipefail
-
 if ! command -v warp-cli >/dev/null 2>&1; then
-  echo "warp-cli 未找到，请先安装 Cloudflare WARP 客户端。" >&2
+  echo "warp-cli not found. Install Cloudflare WARP client first." >&2
   exit 1
 fi
 
-# ===== DNS fallback list (suffix match: bare apex covers subdomains) =====
-fallback=(\n  '*.12306.cn'
-  '*.126.com'
-  '*.163.com'
-  '*.360.cn'
-  '*.abchina.com'
-  '*.alipay.com'
-  '*.aliyun.com'
-  '*.aliyuncs.com'
-  '*.amap.com'
-  '*.baichuan-ai.com'
-  '*.baidu.com'
-  '*.bankcomm.com'
-  '*.bankofchina.com'
-  '*.bilibili.com'
-  '*.bytedance.com'
-  '*.ccb.com'
-  '*.cctv.com'
-  '*.china.com.cn'
-  '*.chinaz.com'
-  '*.cmbchina.com'
-  '*.cnblogs.com'
-  '*.csdn.net'
-  '*.ctrip.com'
-  '*.deepseek.ai'
-  '*.deepseek.com'
-  '*.dianping.com'
-  '*.didiglobal.com'
-  '*.dingtalk.com'
-  '*.docer.com'
-  '*.douban.com'
-  '*.douyin.com'
-  '*.douyu.com'
-  '*.edu.cn'
-  '*.feishu.cn'
-  '*.fliggy.com'
-  '*.foxmail.com'
-  '*.gov.cn'
-  '*.haier.com'
-  '*.huawei.com.cn'
-  '*.huaweicloud.com'
-  '*.huya.com'
-  '*.icbc.com'
-  '*.iqiyi.com'
-  '*.jd.com'
-  '*.jianshu.com'
-  '*.jingdong.com'
-  '*.kuaishou.com'
-  '*.kugou.com'
-  '*.lenovo.com.cn'
-  '*.lingyiwanwu.com'
-  '*.meituan.com'
-  '*.mgtv.com'
-  '*.mi.com'
-  '*.minimax.io'
-  '*.moonshot.cn'
-  '*.myqcloud.com'
-  '*.netease.com'
-  '*.oschina.net'
-  '*.people.com.cn'
-  '*.pinduoduo.com'
-  '*.qq.com'
-  '*.qunar.com'
-  '*.qwen.ai'
-  '*.sina.com.cn'
-  '*.sogou.com'
-  '*.sohu.com'
-  '*.stepfun.com'
-  '*.suning.com'
-  '*.taobao.com'
-  '*.tcl.com'
-  '*.tencentcloud.com'
-  '*.tmall.com'
-  '*.toutiao.com'
-  '*.trip.com'
-  '*.vip.com'
-  '*.volcengine.com'
-  '*.weibo.com'
-  '*.weixin.qq.com'
-  '*.wps.com'
-  '*.xianyu.com'
-  '*.xiaohongshu.com'
-  '*.xinhuanet.com'
-  '*.yi.com'
-  '*.yinyuetai.com'
-  '*.youku.com'
-  '*.zhihu.com'
-  '*.zhipuai.cn'
-  '12306.cn'
+# DNS fallback list (bare homepages only; suffix match covers subdomains)
+fallback=(\n  '12306.cn'
   '126.com'
   '163.com'
   '360.cn'
@@ -189,7 +102,7 @@ fallback=(\n  '*.12306.cn'
   'zhihu.com'
   'zhipuai.cn'\n)
 
-# ===== Tunnel exclude list (domain match: subdomains need *. prefix) =====
+# Tunnel exclude list (homepage + *.homepage)
 exclude=(\n  '*.12306.cn'
   '*.126.com'
   '*.163.com'
@@ -366,15 +279,10 @@ exclude=(\n  '*.12306.cn'
   'zhihu.com'
   'zhipuai.cn'\n)
 
-echo "应用 DNS 回退列表 ($((${#fallback[@]})) 条)..."
-for d in "${fallback[@]}"; do
-  warp-cli dns fallback add "$d" >/dev/null 2>&1 || true
-done
+echo "Applying DNS fallback list ($((${#fallback[@]})) entries)..."
+for d in "${fallback[@]}"; do warp-cli dns fallback add "$d" >/dev/null 2>&1 || true; done
 
-echo "应用隧道排除列表 ($((${#exclude[@]})) 条)..."
-for d in "${exclude[@]}"; do
-  warp-cli tunnel host add "$d" >/dev/null 2>&1 || true
-done
+echo "Applying tunnel exclude list ($((${#exclude[@]})) entries)..."
+for d in "${exclude[@]}"; do warp-cli tunnel host add "$d" >/dev/null 2>&1 || true; done
 
-echo "=== 完成。建议重启 WARP 使规则全量生效 ==="
-echo "warp-cli disconnect && warp-cli connect"
+echo "=== Done. Restart WARP: warp-cli disconnect && warp-cli connect ==="
