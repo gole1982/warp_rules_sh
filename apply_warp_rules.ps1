@@ -3,11 +3,13 @@
 #          domestic (.cn / major Chinese sites) bypass WARP, while foreign
 #          LLM / search / blocked sites go through the WARP tunnel by default.
 #
-# Matching semantics (verified):
-#   - DNS fallback  = SUFFIX match  -> bare "abc.com" already covers all subdomains.
-#                     Therefore the fallback list contains ONLY bare homepages + "cn".
+# Matching semantics (VERIFIED, do not assume):
+#   - DNS fallback   = SUFFIX match -> bare "abc.com" covers all subdomains.
+#                      List contains ONLY bare homepages + "cn". NO wildcards.
 #   - Tunnel exclude = DOMAIN match -> bare "abc.com" does NOT cover subdomains;
-#                     subdomains need "*.abc.com". So exclude list = homepage + *.homepage.
+#                      subdomains need "*.abc.com". List = homepage + *.homepage + "cn".
+#   - "cn" (bare) covers ALL .cn at any level (e.g. baidu.cn, people.com.cn, x.y.cn).
+#     Therefore no per-site .cn entries are needed; "cn" alone is the suffix catch-all.
 
 $ErrorActionPreference = 'SilentlyContinue'
 
@@ -31,10 +33,8 @@ Test-Warp
 
 # DNS fallback: bare homepages only (suffix match covers subdomains) + "cn"
 $fallback = @(
-    '12306.cn',
     '126.com',
     '163.com',
-    '360.cn',
     'abchina.com',
     'alipay.com',
     'aliyun.com',
@@ -48,7 +48,6 @@ $fallback = @(
     'bytedance.com',
     'ccb.com',
     'cctv.com',
-    'china.com.cn',
     'chinaz.com',
     'cmbchina.com',
     'cn',
@@ -64,13 +63,9 @@ $fallback = @(
     'douban.com',
     'douyin.com',
     'douyu.com',
-    'edu.cn',
-    'feishu.cn',
     'fliggy.com',
     'foxmail.com',
-    'gov.cn',
     'haier.com',
-    'huawei.com.cn',
     'huaweicloud.com',
     'huya.com',
     'icbc.com',
@@ -80,22 +75,18 @@ $fallback = @(
     'jingdong.com',
     'kuaishou.com',
     'kugou.com',
-    'lenovo.com.cn',
     'lingyiwanwu.com',
     'meituan.com',
     'mgtv.com',
     'mi.com',
     'minimax.io',
-    'moonshot.cn',
     'myqcloud.com',
     'netease.com',
     'oschina.net',
-    'people.com.cn',
     'pinduoduo.com',
     'qq.com',
     'qunar.com',
     'qwen.ai',
-    'sina.com.cn',
     'sogou.com',
     'sohu.com',
     'stepfun.com',
@@ -117,16 +108,13 @@ $fallback = @(
     'yi.com',
     'yinyuetai.com',
     'youku.com',
-    'zhihu.com',
-    'zhipuai.cn'
+    'zhihu.com'
 )
 
 # Tunnel exclude: homepage + *.homepage (domain match needs wildcard for subdomains) + "cn"
 $exclude  = @(
-    '*.12306.cn',
     '*.126.com',
     '*.163.com',
-    '*.360.cn',
     '*.abchina.com',
     '*.alipay.com',
     '*.aliyun.com',
@@ -140,7 +128,6 @@ $exclude  = @(
     '*.bytedance.com',
     '*.ccb.com',
     '*.cctv.com',
-    '*.china.com.cn',
     '*.chinaz.com',
     '*.cmbchina.com',
     '*.cnblogs.com',
@@ -155,13 +142,9 @@ $exclude  = @(
     '*.douban.com',
     '*.douyin.com',
     '*.douyu.com',
-    '*.edu.cn',
-    '*.feishu.cn',
     '*.fliggy.com',
     '*.foxmail.com',
-    '*.gov.cn',
     '*.haier.com',
-    '*.huawei.com.cn',
     '*.huaweicloud.com',
     '*.huya.com',
     '*.icbc.com',
@@ -171,22 +154,18 @@ $exclude  = @(
     '*.jingdong.com',
     '*.kuaishou.com',
     '*.kugou.com',
-    '*.lenovo.com.cn',
     '*.lingyiwanwu.com',
     '*.meituan.com',
     '*.mgtv.com',
     '*.mi.com',
     '*.minimax.io',
-    '*.moonshot.cn',
     '*.myqcloud.com',
     '*.netease.com',
     '*.oschina.net',
-    '*.people.com.cn',
     '*.pinduoduo.com',
     '*.qq.com',
     '*.qunar.com',
     '*.qwen.ai',
-    '*.sina.com.cn',
     '*.sogou.com',
     '*.sohu.com',
     '*.stepfun.com',
@@ -209,11 +188,8 @@ $exclude  = @(
     '*.yinyuetai.com',
     '*.youku.com',
     '*.zhihu.com',
-    '*.zhipuai.cn',
-    '12306.cn',
     '126.com',
     '163.com',
-    '360.cn',
     'abchina.com',
     'alipay.com',
     'aliyun.com',
@@ -227,10 +203,8 @@ $exclude  = @(
     'bytedance.com',
     'ccb.com',
     'cctv.com',
-    'china.com.cn',
     'chinaz.com',
     'cmbchina.com',
-    'cn',
     'cnblogs.com',
     'csdn.net',
     'ctrip.com',
@@ -243,13 +217,9 @@ $exclude  = @(
     'douban.com',
     'douyin.com',
     'douyu.com',
-    'edu.cn',
-    'feishu.cn',
     'fliggy.com',
     'foxmail.com',
-    'gov.cn',
     'haier.com',
-    'huawei.com.cn',
     'huaweicloud.com',
     'huya.com',
     'icbc.com',
@@ -259,22 +229,18 @@ $exclude  = @(
     'jingdong.com',
     'kuaishou.com',
     'kugou.com',
-    'lenovo.com.cn',
     'lingyiwanwu.com',
     'meituan.com',
     'mgtv.com',
     'mi.com',
     'minimax.io',
-    'moonshot.cn',
     'myqcloud.com',
     'netease.com',
     'oschina.net',
-    'people.com.cn',
     'pinduoduo.com',
     'qq.com',
     'qunar.com',
     'qwen.ai',
-    'sina.com.cn',
     'sogou.com',
     'sohu.com',
     'stepfun.com',
@@ -296,8 +262,7 @@ $exclude  = @(
     'yi.com',
     'yinyuetai.com',
     'youku.com',
-    'zhihu.com',
-    'zhipuai.cn'
+    'zhihu.com'
 )
 
 Add-Fallback $fallback
