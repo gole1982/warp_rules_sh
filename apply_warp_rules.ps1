@@ -4,20 +4,16 @@
 #          LLM / search / blocked sites go through the WARP tunnel by default.
 #
 # Matching semantics (VERIFIED, do not assume):
-#   - DNS fallback   = SUFFIX match -> bare "abc.com" covers all subdomains.
-#                      List contains ONLY bare homepages + "cn". NO wildcards.
+#   - DNS fallback   = SUFFIX match -> bare "abc.com" covers all subdomains. NO wildcards.
 #   - Tunnel exclude = DOMAIN match -> bare "abc.com" does NOT cover subdomains;
 #                      subdomains need "*.abc.com". List = homepage + *.homepage + "cn".
-#   - "cn" (bare) covers ALL .cn at any level (e.g. baidu.cn, people.com.cn, x.y.cn).
-#     Therefore no per-site .cn entries are needed; "cn" alone is the suffix catch-all.
+#   - "cn" (bare) covers ALL .cn at any level. No per-site .cn entries needed.
 
 $ErrorActionPreference = 'SilentlyContinue'
-
 function Test-Warp {
     $reg = warp-cli registration show 2>&1
     if ($LASTEXITCODE -ne 0 -or ($reg -match 'not registered' -or $reg -match 'error')) {
-        Write-Warning "warp-cli not ready / not registered. Run: warp-cli registration new"
-        exit 1
+        Write-Warning "warp-cli not ready / not registered. Run: warp-cli registration new"; exit 1
     }
 }
 function Add-Fallback { param([string[]]$list)
@@ -28,10 +24,7 @@ function Add-Exclude { param([string[]]$list)
     $n=0; foreach ($d in $list){ if((warp-cli tunnel host add $d 2>&1) -match 'Success'){ $n++ } }
     Write-Host "Tunnel exclude: added $n / $($list.Count)"
 }
-
 Test-Warp
-
-# DNS fallback: bare homepages only (suffix match covers subdomains) + "cn"
 $fallback = @(
     '126.com',
     '163.com',
@@ -40,11 +33,13 @@ $fallback = @(
     'aliyun.com',
     'aliyuncs.com',
     'amap.com',
+    'azureedge.net',
     'baichuan-ai.com',
     'baidu.com',
     'bankcomm.com',
     'bankofchina.com',
     'bilibili.com',
+    'bing.com',
     'bytedance.com',
     'ccb.com',
     'cctv.com',
@@ -76,17 +71,24 @@ $fallback = @(
     'kuaishou.com',
     'kugou.com',
     'lingyiwanwu.com',
+    'live.com',
+    'marketplaceapp.com',
     'meituan.com',
     'mgtv.com',
     'mi.com',
+    'microsoft.com',
     'minimax.io',
+    'msftauth.net',
+    'msftncsi.com',
     'myqcloud.com',
     'netease.com',
+    'office.com',
     'oschina.net',
     'pinduoduo.com',
     'qq.com',
     'qunar.com',
     'qwen.ai',
+    'skype.com',
     'sogou.com',
     'sohu.com',
     'stepfun.com',
@@ -101,6 +103,9 @@ $fallback = @(
     'volcengine.com',
     'weibo.com',
     'weixin.qq.com',
+    'windows.com',
+    'windows.net',
+    'windowsstore.com',
     'wps.com',
     'xianyu.com',
     'xiaohongshu.com',
@@ -110,8 +115,6 @@ $fallback = @(
     'youku.com',
     'zhihu.com'
 )
-
-# Tunnel exclude: homepage + *.homepage (domain match needs wildcard for subdomains) + "cn"
 $exclude  = @(
     '*.126.com',
     '*.163.com',
@@ -120,11 +123,13 @@ $exclude  = @(
     '*.aliyun.com',
     '*.aliyuncs.com',
     '*.amap.com',
+    '*.azureedge.net',
     '*.baichuan-ai.com',
     '*.baidu.com',
     '*.bankcomm.com',
     '*.bankofchina.com',
     '*.bilibili.com',
+    '*.bing.com',
     '*.bytedance.com',
     '*.ccb.com',
     '*.cctv.com',
@@ -155,17 +160,24 @@ $exclude  = @(
     '*.kuaishou.com',
     '*.kugou.com',
     '*.lingyiwanwu.com',
+    '*.live.com',
+    '*.marketplaceapp.com',
     '*.meituan.com',
     '*.mgtv.com',
     '*.mi.com',
+    '*.microsoft.com',
     '*.minimax.io',
+    '*.msftauth.net',
+    '*.msftncsi.com',
     '*.myqcloud.com',
     '*.netease.com',
+    '*.office.com',
     '*.oschina.net',
     '*.pinduoduo.com',
     '*.qq.com',
     '*.qunar.com',
     '*.qwen.ai',
+    '*.skype.com',
     '*.sogou.com',
     '*.sohu.com',
     '*.stepfun.com',
@@ -180,6 +192,9 @@ $exclude  = @(
     '*.volcengine.com',
     '*.weibo.com',
     '*.weixin.qq.com',
+    '*.windows.com',
+    '*.windows.net',
+    '*.windowsstore.com',
     '*.wps.com',
     '*.xianyu.com',
     '*.xiaohongshu.com',
@@ -195,11 +210,13 @@ $exclude  = @(
     'aliyun.com',
     'aliyuncs.com',
     'amap.com',
+    'azureedge.net',
     'baichuan-ai.com',
     'baidu.com',
     'bankcomm.com',
     'bankofchina.com',
     'bilibili.com',
+    'bing.com',
     'bytedance.com',
     'ccb.com',
     'cctv.com',
@@ -230,17 +247,24 @@ $exclude  = @(
     'kuaishou.com',
     'kugou.com',
     'lingyiwanwu.com',
+    'live.com',
+    'marketplaceapp.com',
     'meituan.com',
     'mgtv.com',
     'mi.com',
+    'microsoft.com',
     'minimax.io',
+    'msftauth.net',
+    'msftncsi.com',
     'myqcloud.com',
     'netease.com',
+    'office.com',
     'oschina.net',
     'pinduoduo.com',
     'qq.com',
     'qunar.com',
     'qwen.ai',
+    'skype.com',
     'sogou.com',
     'sohu.com',
     'stepfun.com',
@@ -255,6 +279,9 @@ $exclude  = @(
     'volcengine.com',
     'weibo.com',
     'weixin.qq.com',
+    'windows.com',
+    'windows.net',
+    'windowsstore.com',
     'wps.com',
     'xianyu.com',
     'xiaohongshu.com',
@@ -264,8 +291,6 @@ $exclude  = @(
     'youku.com',
     'zhihu.com'
 )
-
 Add-Fallback $fallback
 Add-Exclude  $exclude
-
 Write-Host "=== Done. Restart WARP to apply fully: warp-cli disconnect ; warp-cli connect ==="
