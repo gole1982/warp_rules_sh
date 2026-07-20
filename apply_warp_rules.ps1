@@ -1,14 +1,4 @@
 # Requires: Cloudflare WARP client installed, warp-cli in PATH, run as Administrator
-# Purpose: Apply domain-fallback + split-tunnel exclusion rules so that
-#          domestic (.cn / major Chinese sites) bypass WARP, while foreign
-#          LLM / search / blocked sites go through the WARP tunnel by default.
-#
-# Matching semantics (VERIFIED, do not assume):
-#   - DNS fallback   = SUFFIX match -> bare "abc.com" covers all subdomains. NO wildcards.
-#   - Tunnel exclude = DOMAIN match -> bare "abc.com" does NOT cover subdomains;
-#                      subdomains need "*.abc.com". List = homepage + *.homepage + "cn".
-#   - "cn" (bare) covers ALL .cn at any level. No per-site .cn entries needed.
-
 $ErrorActionPreference = 'SilentlyContinue'
 function Test-Warp {
     $reg = warp-cli registration show 2>&1
@@ -39,13 +29,13 @@ $fallback = @(
     'bankcomm.com',
     'bankofchina.com',
     'bilibili.com',
-    'bing.com',
     'bytedance.com',
     'ccb.com',
     'cctv.com',
     'chinaz.com',
     'cmbchina.com',
     'cn',
+    'cn.bing.com',
     'cnblogs.com',
     'csdn.net',
     'ctrip.com',
@@ -129,12 +119,12 @@ $exclude  = @(
     '*.bankcomm.com',
     '*.bankofchina.com',
     '*.bilibili.com',
-    '*.bing.com',
     '*.bytedance.com',
     '*.ccb.com',
     '*.cctv.com',
     '*.chinaz.com',
     '*.cmbchina.com',
+    '*.cn.bing.com',
     '*.cnblogs.com',
     '*.csdn.net',
     '*.ctrip.com',
@@ -216,12 +206,12 @@ $exclude  = @(
     'bankcomm.com',
     'bankofchina.com',
     'bilibili.com',
-    'bing.com',
     'bytedance.com',
     'ccb.com',
     'cctv.com',
     'chinaz.com',
     'cmbchina.com',
+    'cn.bing.com',
     'cnblogs.com',
     'csdn.net',
     'ctrip.com',
